@@ -1,0 +1,40 @@
+---
+- name: Add stanza for the index specified
+  ini_file:
+    dest: "{{ splunk_home }}/etc/master-apps/_cluster/local/indexes.conf"
+    section: "{{ index_indexName }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - { key: "repFactor", value: "auto" }
+
+- name: Write path for the index
+  ini_file:
+    dest: "{{ splunk_home }}/etc/master-apps/_cluster/local/indexes.conf"
+    section: "{{ index_indexName }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - { key: "homePath", value: "{{index_homePath | default('', true) }}" }
+    - { key: "coldPath", value: "{{index_coldPath | default('', true) }}" }
+    - { key: "thawedPath", value: "{{index_thawedPath | default('', true) }}" }
+  when:
+    - index_indexName != "default"
+    - item.value | length > 0
+
+- name: Configure retention policy
+  ini_file:
+    dest: "{{ splunk_home }}/etc/master-apps/_cluster/local/indexes.conf"
+    section: "{{ index_indexName }}"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - { key: "maxTotalDataSizeMB", value: "{{index_maxTotalDataSizeMB | default('', true) }}" }
+  when:
+    - item.value | length > 0

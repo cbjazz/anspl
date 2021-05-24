@@ -1,0 +1,77 @@
+---
+# Configure forwarding to indexer cluster master
+# See: https://docs.splunk.com/Documentation/Splunk/latest/Indexer/indexerdiscovery
+- name: Setup indexer discovery for index-clustering
+  ini_file:
+    path: "{{ splunk_home }}/etc/system/local/outputs.conf"
+    section: "indexer_discovery:splunk-indexer"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+    owner: "{{ splunk_nix_user }}"
+    group: "{{ splunk_nix_group }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - {key: "pass4SymmKey", value: "{{ splunk.idxc.discoveryPass4SymmKey if splunk.idxc.discoveryPass4SymmKey is defined and splunk.idxc.discoveryPass4SymmKey else splunk.idxc.pass4SymmKey }}"}
+    - {key: "master_uri", value: "{{ splunk_uri_cm }}"}
+  when:
+    - item.value | length > 0
+  register: indexer_discovery
+
+- name: Setup tcpout group for index-clustering
+  ini_file:
+    path: "{{ splunk_home }}/etc/system/local/outputs.conf"
+    section: "tcpout:group1"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+    owner: "{{ splunk_nix_user }}"
+    group: "{{ splunk_nix_group }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - {key: "indexerDiscovery", value: "splunk-indexer"}
+  when:
+    - item.value | length > 0
+  register: tcpout_group
+
+- name: Setup default tcpout group for index-clustering
+  ini_file:
+    path: "{{ splunk_home }}/etc/system/local/outputs.conf"
+    section: "tcpout"
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+    owner: "{{ splunk_nix_user }}"
+    group: "{{ splunk_nix_group }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  with_items:
+    - {key: "indexAndForward", value: "false"}
+    - {key: "defaultGroup", value: "group1"}
+  when:
+    - item.value | length > 0
+  register: default_tcpout_group
+
+# NOTE: If this task is called or used, it will disable all local indexing!
+- name: Disable indexing on the current node
+  ini_file:
+    path: "{{ splunk_home }}/etc/system/local/outputs.conf"
+    section: "indexAndForward"
+    option: "index"
+    value: "false"
+    owner: "{{ splunk_nix_user }}"
+    group: "{{ splunk_nix_group }}"
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  register: index_disabling
+  when:
+    - "'licensemaster' not in group_names"
+    - "'indexer' not in group_names"
+
+- include_tasks: splunk_restart.yml
+  when: indexer_discovery is changed or tcpout_group is changed or default_tcpout_group is changed or index_disabling is changed
+
+# Restart only when Splunk is running and when any of the above have changed
+#- name: Restart if the configuration is changed
+#  become: true
+#  notify: restart splunk
+#  when: indexer_discovery is changed or tcpout_group is changed or default_tcpout_group is changed or index_disabling is changed

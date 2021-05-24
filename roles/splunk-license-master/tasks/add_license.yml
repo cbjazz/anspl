@@ -1,0 +1,40 @@
+---
+- name: Check if license already added
+  shell: "echo $({{ splunk_home }}/bin/splunk list licenser-localslave -auth {{ splunk.admin_user }}:{{ splunk.admin_password }}  | grep '{{ splunk.lm.license_guid_values }}')"
+  register: license_check
+  become: true
+  become_user: "{{ splunk_nix_user }}"
+  check_mode: no
+  changed_when: False
+
+- name: Execute this block only if splunk license is not registed
+  block:
+  - name: Create Enterprise licenses dir
+    become: true
+    become_user: "{{  splunk_nix_user }}"
+    file:
+      path: "{{ splunk_home }}/etc/licenses/enterprise"
+      owner: "{{ splunk_nix_user }}"
+      group: "{{ splunk_nix_group }}" 
+      mode: '0750'
+      state: directory
+
+  - name: Copy over Splunk license file
+    become: true
+    become_user: "{{  splunk_nix_user }}"
+    copy:
+      src: "../../environments/{{ splunk_env }}/group_vars/secrets/{{ splunk.lm.license_file }}"
+      dest: "{{ splunk_home }}/etc/licenses/enterprise/"
+      owner: "{{ splunk_nix_user }}"
+      group: "{{ splunk_nix_group }}"
+      mode: '0640'
+
+  - name: Install Splunk Enterprise license key
+    shell: "echo $({{ splunk_home }}/bin/splunk add licenses {{ splunk_home }}/etc/licenses/enterprise/{{ splunk.lm.license_file }} -auth {{ splunk.admin_user }}:{{ splunk.admin_password }} )"
+    become: true
+    become_user: "{{  splunk_nix_user }}"
+    ignore_errors: True
+    notify: restart splunk
+    no_log: true
+  # Conditional for this block    
+  when: license_check.stdout == ""

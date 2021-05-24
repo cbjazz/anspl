@@ -1,0 +1,12 @@
+---
+- name: Set current node as indexer cluster peer
+  command: "{{ splunk_home }}/bin/splunk edit cluster-config -mode slave -master_uri {{ splunk_uri_cm }} -replication_port {{ splunk.idxc.replication_port }} -secret '{{ splunk.idxc.pass4SymmKey }}' -auth '{{ splunk.admin_user }}:{{ splunk.admin_password }}'"
+  become: yes
+  become_user: "{{ splunk_nix_user }}"
+  register: task_result
+  until: task_result.rc == 0
+  changed_when: task_result.rc == 0
+  retries: "{{ retry_num }}"
+  delay: "{{ retry_delay }}"
+  notify: restart splunk
+  debugger: on_failed

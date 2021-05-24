@@ -1,0 +1,7 @@
+# Example playbook to stop splunk daemon on a Splunk host
+- hosts:
+    - "{{ inventory_or_host }}"
+  roles:
+    - ../../roles/splunk
+  vars:
+    - deployment_task: splunk_restart.yml

@@ -1,0 +1,12 @@
+---
+- name: Set current node as indexer cluster searchhead
+  command: "{{ splunk_home }}/bin/splunk edit cluster-config -mode searchhead -master_uri {{ splunk_uri_cm }} -secret '{{ splunk.idxc.pass4SymmKey }}' -auth '{{ splunk.admin_user }}:{{ splunk.admin_password }}'"
+  become: yes
+  become_user: "{{ splunk_nix_user }}"
+  register: task_result
+  until: task_result.rc == 0
+  changed_when: task_result.rc == 0
+  retries: "{{ retry_num }}"
+  delay: "{{ retry_delay }}"
+  notify: restart splunk
+  debugger: on_failed

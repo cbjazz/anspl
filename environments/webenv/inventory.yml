@@ -1,0 +1,23 @@
+# Splunk Cluster Install Test 
+---
+all:
+  hosts:
+    172.31.0.191: null
+    172.31.18.167: null
+    172.31.19.123: null
+    172.31.22.216: null
+full:
+  children:
+    clustermaster:
+      hosts:
+        172.31.22.216: null
+    indexer:
+      hosts:
+        172.31.0.191: null
+        172.31.18.167: null
+    licensemaster:
+      hosts:
+        172.31.22.216: null
+    searchhead:
+      hosts:
+        172.31.19.123: null

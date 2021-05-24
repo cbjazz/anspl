@@ -1,0 +1,8 @@
+---
+all:
+  children:
+    full:
+      children:
+        search:
+          hosts:
+            172.31.22.216:

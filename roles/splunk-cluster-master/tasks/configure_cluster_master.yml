@@ -1,0 +1,28 @@
+---
+- name: Set indexer discovery
+  uri:
+    url: "https://127.0.0.1:{{ splunk.mgmt_port }}/servicesNS/nobody/system/configs/conf-server"
+    method: POST
+    url_username: "{{ splunk.admin_user }}"
+    url_password: "{{ splunk.admin_password }}"
+    validate_certs: False
+    body: 
+      name: "indexer_discovery"
+      pass4SymmKey: "{{ splunk.idxc.discoveryPass4SymmKey if splunk.idxc.discoveryPass4SymmKey is defined and splunk.idxc.discoveryPass4SymmKey else splunk.idxc.passSymmKey }}"
+    body_format: "form-urlencoded"
+    status_code: 201, 409
+    timeout: 10
+    use_proxy: no
+  register: set_indexer_discovery
+  changed_when: set_indexer_discovery.status == 201
+
+- name: Set the current node as a Splunk indexer cluster master
+  command: "{{ splunk_home }}/bin/splunk edit cluster-config -mode master -replication_factor {{ splunk.idxc.replication_factor }} -search_factor {{ splunk.idxc.search_factor }} -secret '{{ splunk.idxc.pass4SymmKey }}' -cluster_label '{{ splunk.idxc.label }}' -auth '{{ splunk.admin_user }}:{{ splunk.admin_password }}'"
+  register: task_result
+  until: task_result.rc == 0
+  changed_when: task_result.rc == 0
+  retries: "{{ retry_num }}"
+  delay: "{{ retry_delay }}"
+  notify: restart splunk
+  become: yes
+  become_user: "{{ splunk_nix_user }}"
